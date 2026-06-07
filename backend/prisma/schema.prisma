@@ -1,0 +1,112 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String      @id @default(uuid())
+  username     String      @unique
+  passwordHash String
+  fullName     String
+  role         String      // "Owner", "Manager", "Collection Officer"
+  branchId     String      // e.g. "GI-BR-001"
+  status       String      @default("Active") // "Active", "Suspended"
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  auditLogs    AuditLog[]
+  approvals    Approval[]  @relation("ApprovalsReviewed")
+
+  @@map("users")
+}
+
+model Customer {
+  id                   String     @id @default(uuid())
+  fullName             String
+  nicNumber            String     @unique
+  phoneNumber          String     @unique
+  address              String
+  monthlyIncome        Double
+  guarantorName        String
+  guarantorPhone       String
+  gpsLocation          String     @default("Not Stamped")
+  nicFrontPath         String?
+  biometricSelfiePath  String?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+  loans                Loan[]
+
+  @@map("customers")
+}
+
+model Loan {
+  id                 String     @id @default(uuid())
+  customerId         String
+  customerName       String
+  loanAmount         Double
+  interestRate       Double     // e.g. 12.0 for 12%
+  installmentAmount  Double
+  outstandingBalance Double
+  frequency          String     // "Daily", "Weekly", "Monthly"
+  paymentDurationDays Int       @default(100)
+  startDate          String     // "YYYY-MM-DD"
+  status             String     @default("Active") // "Active", "Overdue", "Completed"
+  lastPaidDate       String?    // "YYYY-MM-DD"
+  penaltyAmount      Double     @default(0.0)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  customer           Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  payments           Payment[]
+
+  @@map("loans")
+}
+
+model Payment {
+  receiptNumber      String     @id
+  loanId             String
+  customerId         String
+  customerName       String
+  paymentDate        String     // "YYYY-MM-DD"
+  paymentTime        String     // "HH:MM AM/PM"
+  amountPaid         Double
+  remainingBalance   Double
+  collectorName      String
+  paymentMethod      String     // "Cash", "Bank Transfer", "Wallet", "QR"
+  remarks            String?
+  isOfflineQueued    Boolean    @default(false)
+  createdAt          DateTime   @default(now())
+  loan               Loan       @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+model AuditLog {
+  id            String   @id @default(uuid())
+  timestamp     DateTime @default(now())
+  operationType String   // "Security Authentication", "Customer Management", "Disbursal Engine", etc.
+  details       String
+  operatorName  String
+  status        String   // "Approved", "Failed", "Pending"
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("audit_logs")
+}
+
+model Approval {
+  id            String    @id @default(uuid())
+  timestamp     DateTime  @default(now())
+  requesterName String
+  sectionName   String    // "Loan Disbursal", "Overdue Waive", "System Override"
+  description   String
+  status        String    @default("Pending") // "Pending", "Approved", "Rejected"
+  reviewTime    DateTime?
+  reviewerName  String?
+  reviewerId    String?
+  reviewer      User?     @relation("ApprovalsReviewed", fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@map("approvals")
+}

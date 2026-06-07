@@ -1,0 +1,6 @@
+{
+  "name": "GILCMS",
+  "description": "Enterprise microfinance loan collection management app for Garuda Investment Sri Lanka.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
